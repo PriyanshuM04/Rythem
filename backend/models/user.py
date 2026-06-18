@@ -10,3 +10,4 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
 
     playlists = relationship("Playlist", back_populates="owner")
+    artist_profile = relationship("ArtistProfile", back_populates="user", uselist=False)
