@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #D633E0;
+  --color-accent-hover: #C020CC;
+  --color-surface: #1A1A1D;
+  --color-surface-raised: #232326;
+  --color-surface-base: #0F0F11;
+  --color-border: #2E2E32;
+  --radius-card: 16px;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface-base);
+    color: white;
+  }
+}
