@@ -10,12 +10,12 @@ function GoogleIcon() {
 }
 
 export default function Button({ variant = "primary", children, className = "", ...props }) {
-  const base = "w-full py-2.5 rounded-full font-serif transition flex items-center justify-center gap-2";
+  const base = "w-full rounded-full font-serif transition flex items-center justify-center gap-2";
 
   const variants = {
-    primary: "bg-accent hover:bg-accent-hover text-white text-base",
-    google: "bg-surface-raised hover:bg-border text-white text-sm",
-    disabled: "bg-gray-600 text-gray-300 cursor-not-allowed",
+    primary: "py-2 bg-accent hover:bg-accent-hover text-white text-base",
+    google: "py-2.5 bg-surface-raised hover:bg-border text-white text-sm",
+    disabled: "py-2 bg-gray-600 text-gray-300 cursor-not-allowed",
   };
 
   return (
