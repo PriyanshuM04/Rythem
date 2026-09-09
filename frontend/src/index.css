@@ -1,13 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Aleo:wght@400;700;800&family=Inter:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
+  --font-serif: "Aleo", serif;
+  --font-sans: "Inter", sans-serif;
   --color-accent: #D633E0;
   --color-accent-hover: #C020CC;
-  --color-surface: #1A1A1D;
+  --color-surface: #303030;
   --color-surface-raised: #232326;
   --color-surface-base: #0F0F11;
   --color-border: #2E2E32;
-  --radius-card: 16px;
+  --radius-card: 15px;
 }
 
 @layer base {
