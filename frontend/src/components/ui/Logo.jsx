@@ -1,4 +1,4 @@
-export default function Logo({ size = 56 }) {
+export default function Logo({ size = 56, withMargin = true }) {
   const bars = [28, 46, 68, 52, 72, 42, 26];
   const barWidth = 9;
   const barGap = 7;
@@ -9,7 +9,7 @@ export default function Logo({ size = 56 }) {
   const startX = cx - totalWidth / 2;
 
   return (
-    <div className="mb-4" style={{ width: size, height: size }}>
+    <div className={withMargin ? "mb-4" : ""} style={{ width: size, height: size }}>
       <svg
         viewBox="0 0 160 160"
         width={size}
@@ -38,14 +38,7 @@ export default function Logo({ size = 56 }) {
         <circle cx={cx} cy={cy} r="72" fill="none" stroke="url(#ringGrad)" strokeWidth="1.8" />
         <g clipPath="url(#circleClip)" fill="url(#barGrad)">
           {bars.map((h, i) => (
-            <rect
-              key={i}
-              x={startX + i * step}
-              y={cy - h / 2}
-              width={barWidth}
-              height={h}
-              rx="4.5"
-            />
+            <rect key={i} x={startX + i * step} y={cy - h / 2} width={barWidth} height={h} rx="4.5" />
           ))}
         </g>
       </svg>
