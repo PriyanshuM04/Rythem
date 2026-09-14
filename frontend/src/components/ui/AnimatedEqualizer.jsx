@@ -2,7 +2,7 @@ export default function AnimatedEqualizer({ size = 16, color = "#D633E0" }) {
   const bars = [0, 1, 2];
   return (
     <div
-      className="flex items-end gap-[2px]"
+      className="flex items-end gap-0.5"
       style={{ width: size, height: size }}
     >
       {bars.map((i) => (

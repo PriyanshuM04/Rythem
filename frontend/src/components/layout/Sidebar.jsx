@@ -64,7 +64,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-56 shrink-0 bg-[#2C2C2C] flex flex-col justify-between p-5 border-r border-border sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+    <aside className="w-56 shrink-0 bg-[#2C2C2C] flex flex-col justify-between p-5 border-r border-border h-full overflow-y-auto">
       <div>
         <NavSection title="Browse" links={browseLinks} />
         <NavSection title="Library" links={libraryLinks} />

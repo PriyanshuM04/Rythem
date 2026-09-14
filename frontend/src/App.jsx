@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import ArtistProfile from "./pages/ArtistProfile";
 import ArtistDashboard from "./pages/ArtistDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PlayerFull from "./pages/PlayerFull";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/artist/:id" element={<ArtistProfile />} />
             <Route path="/dashboard" element={<ArtistDashboard />} />
+            <Route path="/player" element={<PlayerFull />} />
           </Route>
         </Route>
       </Routes>

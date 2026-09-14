@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import PlayableThumbnail from "../components/ui/PlayableThumbnail";
+import { usePlayerStore } from "../store/playerStore";
 
 const RECENT_VISIBLE_LIMIT = 12;
 const PAGE_SIZE = 10;
@@ -28,7 +29,7 @@ function generateTrendingBatch(startId, count) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const [nowPlaying, setNowPlaying] = useState({ section: "trending", id: 1 });
+  const { currentSong, isPlaying, playSong, togglePlay } = usePlayerStore();
   const [trendingSongs, setTrendingSongs] = useState(() => generateTrendingBatch(1, PAGE_SIZE));
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -42,8 +43,17 @@ export default function Home() {
   trendingSongsRef.current = trendingSongs;
   loadingMoreRef.current = loadingMore;
 
-  const isPlaying = (section, id) =>
-    nowPlaying.section === section && nowPlaying.id === id;
+  const isCurrentlyPlaying = (section, id) =>
+    isPlaying && currentSong?.section === section && currentSong?.id === id;
+
+  const handlePlayClick = (section, songData) => {
+    const isSameSong = currentSong?.section === section && currentSong?.id === songData.id;
+    if (isSameSong) {
+      togglePlay();
+    } else {
+      playSong({ section, ...songData });
+    }
+  };
 
   const visibleRecent = allRecentItems.slice(0, RECENT_VISIBLE_LIMIT);
   const hasMoreRecentHistory = allRecentItems.length > RECENT_VISIBLE_LIMIT;
@@ -83,7 +93,7 @@ export default function Home() {
   }, [loadMore]);
 
   return (
-    <div className="h-full flex flex-col bg-[#303030] font-serif p-8">
+    <div className="h-full flex flex-col bg-surface font-serif p-8">
       {/* Recent — fixed at top, original size, horizontal scroll, no visible scrollbar */}
       <section className="mb-8 shrink-0">
         <h2 className="text-2xl font-bold text-white mb-5">Recent</h2>
@@ -93,11 +103,13 @@ export default function Home() {
               {visibleRecent.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => setNowPlaying({ section: "recent", id: item.id })}
+                  onClick={() =>
+                    handlePlayClick("recent", { id: item.id, title: item.name, artists: item.about, album: "" })
+                  }
                   className="flex flex-col gap-2 cursor-pointer w-32 shrink-0 group"
                 >
                   <PlayableThumbnail
-                    isPlaying={isPlaying("recent", item.id)}
+                    isPlaying={isCurrentlyPlaying("recent", item.id)}
                     className="aspect-square"
                     eqSize={22}
                   />
@@ -119,7 +131,7 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="pointer-events-none absolute top-0 right-0 h-full w-12 bg-gradient-to-l from-[#303030] to-transparent" />
+          <div className="pointer-events-none absolute top-0 right-0 h-full w-12 bg-linear-to-l from-surface to-transparent" />
         </div>
       </section>
 
@@ -133,11 +145,11 @@ export default function Home() {
           >
             <div className="flex flex-col gap-2">
               {trendingSongs.map((song) => {
-                const playing = isPlaying("trending", song.id);
+                const playing = isCurrentlyPlaying("trending", song.id);
                 return (
                   <div
                     key={song.id}
-                    onClick={() => setNowPlaying({ section: "trending", id: song.id })}
+                    onClick={() => handlePlayClick("trending", song)}
                     className={`grid grid-cols-[40px_1fr_1fr_1fr_80px] items-center gap-4 px-4 py-3 rounded-md cursor-pointer transition shrink-0 ${
                       playing ? "bg-white/10" : "hover:bg-white/5"
                     }`}
@@ -163,7 +175,7 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="pointer-events-none absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#303030] to-transparent" />
+          <div className="pointer-events-none absolute bottom-0 left-0 w-full h-12 bg-linear-to-t from-surface to-transparent" />
         </div>
       </section>
     </div>

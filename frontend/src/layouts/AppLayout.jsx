@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/layout/Sidebar";
 import TopNav from "../components/layout/TopNav";
+import PlayerBar from "../components/layout/PlayerBar";
 
 export default function AppLayout() {
   return (
@@ -12,6 +13,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <PlayerBar />
     </div>
   );
 }
