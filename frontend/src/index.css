@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Aleo:wght@400;700;800&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Aleo", serif;
+  --font-sans: "Inter", sans-serif;
+  --color-accent: #D633E0;
+  --color-accent-hover: #C020CC;
+  --color-surface: #303030;
+  --color-surface-raised: #232326;
+  --color-surface-base: #0F0F11;
+  --color-border: #2E2E32;
+  --radius-card: 15px;
+}
+
+@keyframes eqBar {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface-base);
+    color: white;
+  }
+}
+
+/* Custom scrollbar for scrollable sections */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #757575;
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #9a9a9a;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
