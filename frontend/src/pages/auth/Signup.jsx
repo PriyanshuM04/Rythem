@@ -21,7 +21,11 @@ export default function Signup() {
       await authService.register(identifier, password);
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.detail || "Signup failed. Try a different email/username.");
+      const detail = err.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d.msg).join(", ")
+        : detail || "Signup failed. Try a different email/username.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -49,7 +53,7 @@ export default function Signup() {
             {loading ? "Please wait..." : "Continue"}
           </Button>
           <span className="text-xs text-gray-500 font-sans">or</span>
-          <Button type="button" variant="google" className="max-w-[220px]">
+          <Button type="button" variant="google" className="max-w-55">
             Continue with Google
           </Button>
         </div>

@@ -26,7 +26,11 @@ export default function Login() {
       login({ username: identifier }, data.access_token);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed. Check your credentials.");
+      const detail = err.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d.msg).join(", ")
+        : detail || "Login failed. Check your credentials.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -62,7 +66,7 @@ export default function Login() {
             {loading ? "Please wait..." : "Continue"}
           </Button>
           <span className="text-xs text-gray-500 font-sans">or</span>
-          <Button type="button" variant="google" className="max-w-[220px]">
+          <Button type="button" variant="google" className="max-w-55">
             Continue with Google
           </Button>
         </div>
