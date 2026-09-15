@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from jose import jwt, JWTError
@@ -10,6 +11,8 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+PASSWORD_RESET_EXPIRE_MINUTES = 11
+EMAIL_CONFIRM_EXPIRE_HOURS = 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -34,3 +37,12 @@ def verify_token(token: str):
         return username
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def generate_secure_token() -> str:
+    return secrets.token_urlsafe(32)
+
+def get_password_reset_expiry() -> datetime:
+    return datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES)
+
+def get_email_confirm_expiry() -> datetime:
+    return datetime.utcnow() + timedelta(hours=EMAIL_CONFIRM_EXPIRE_HOURS)
