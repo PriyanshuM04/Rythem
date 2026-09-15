@@ -17,4 +17,17 @@ export const authService = {
     });
     return response.data; // UserResponse
   },
+
+  forgotPassword: async (email) => {
+    const response = await api.post("/auth/forgot-password", { email });
+    return response.data; // { message }
+  },
+  
+  resetPassword: async (token, newPassword) => {
+    const response = await api.post("/auth/reset-password", {
+      token,
+      new_password: newPassword,
+    });
+    return response.data; // { message }
+  },
 };

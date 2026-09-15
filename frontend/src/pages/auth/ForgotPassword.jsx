@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import AuthCard from "../../components/ui/AuthCard";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import { authService } from "../../services/authService";
 
 const COOLDOWN_SECONDS = 60;
 
@@ -21,10 +22,17 @@ export default function ForgotPassword() {
   const handleSend = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: wire to backend /auth/forgot-password once ready
-    setLoading(false);
-    setSent(true);
-    setCooldown(COOLDOWN_SECONDS);
+    try {
+      await authService.forgotPassword(email);
+      setSent(true);
+      setCooldown(COOLDOWN_SECONDS);
+    } catch (err) {
+      // optional: surface an error state, though backend always returns
+      // a generic success message even for unknown emails by design
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canResend = sent && cooldown === 0;

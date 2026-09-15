@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/ui/AuthCard";
 import PasswordInput from "../../components/ui/PasswordInput";
 import Button from "../../components/ui/Button";
+import { authService } from "../../services/authService";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tokenInvalid, setTokenInvalid] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,12 +26,23 @@ export default function ResetPassword() {
     }
 
     setLoading(true);
-    // TODO: wire to backend /auth/reset-password with { token, newPassword } once ready
-    setLoading(false);
-    navigate("/login");
+    try {
+      await authService.resetPassword(token, newPassword);
+      navigate("/login");
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 410 || status === 400) {
+        setTokenInvalid(true);
+      } else {
+        const detail = err.response?.data?.detail;
+        setError(typeof detail === "string" ? detail : "Something went wrong. Try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!token) {
+  if (!token || tokenInvalid) {
     return (
       <AuthCard title="Reset Password">
         <p className="text-center text-gray-400">
