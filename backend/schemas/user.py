@@ -33,3 +33,13 @@ class ConfirmEmailRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+class UserMeResponse(BaseModel):
+    id: int
+    username: str
+    email: EmailStr
+    tier: str            # TODO Phase 4: replace hardcoded default with real tier engine
+    is_artist: bool
+    token_balance: int   # TODO Phase 4: replace hardcoded 0 with real token ledger balance
+
+    model_config = ConfigDict(from_attributes=True)
