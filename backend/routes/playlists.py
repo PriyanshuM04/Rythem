@@ -19,6 +19,16 @@ def get_my_playlists(db: Session = Depends(get_db), current_user = Depends(get_c
     playlists = db.query(models.Playlist).filter(models.Playlist.owner_id == current_user.id).all()
     return {"playlists": playlists}
 
+@router.get("/saved", response_model=schemas.SavedPlaylistsResponse)
+def get_saved_playlists(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    playlists = (
+        db.query(models.Playlist)
+        .join(PlaylistSave, PlaylistSave.playlist_id == models.Playlist.id)
+        .filter(PlaylistSave.user_id == current_user.id)
+        .all()
+    )
+    return {"playlists": playlists}
+
 @router.get("/{playlist_id}", response_model=schemas.PlaylistResponse)
 def get_playlist(playlist_id: int, db: Session = Depends(get_db)):
     playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
@@ -43,32 +53,6 @@ def add_song_to_playlist(playlist_id: int, body: schemas.AddSongToPlaylistReques
     db.refresh(playlist)
     return playlist
 
-@router.delete("/{playlist_id}/songs/{song_id}")
-def remove_song_from_playlist(playlist_id: int, song_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
-    if not playlist:
-        raise HTTPException(status_code=404, detail="Playlist not found")
-    if playlist.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not your playlist")
-    song = db.query(models.Song).filter(models.Song.id == song_id).first()
-    if not song:
-        raise HTTPException(status_code=404, detail="Song not found")
-    if song not in playlist.songs:
-        raise HTTPException(status_code=400, detail="Song not in playlist")
-    playlist.songs.remove(song)
-    db.commit()
-    return {"message": "Song removed from playlist"}
-
-@router.get("/saved", response_model=schemas.SavedPlaylistsResponse)
-def get_saved_playlists(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    playlists = (
-        db.query(models.Playlist)
-        .join(PlaylistSave, PlaylistSave.playlist_id == models.Playlist.id)
-        .filter(PlaylistSave.user_id == current_user.id)
-        .all()
-    )
-    return {"playlists": playlists}
-
 @router.post("/{playlist_id}/save", response_model=schemas.PlaylistSaveResponse)
 def toggle_save_playlist(playlist_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
@@ -88,3 +72,19 @@ def toggle_save_playlist(playlist_id: int, db: Session = Depends(get_db), curren
     db.add(PlaylistSave(user_id=current_user.id, playlist_id=playlist_id))
     db.commit()
     return {"saved": True}
+
+@router.delete("/{playlist_id}/songs/{song_id}")
+def remove_song_from_playlist(playlist_id: int, song_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    if playlist.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your playlist")
+    song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+    if song not in playlist.songs:
+        raise HTTPException(status_code=400, detail="Song not in playlist")
+    playlist.songs.remove(song)
+    db.commit()
+    return {"message": "Song removed from playlist"}
