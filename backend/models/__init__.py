@@ -3,3 +3,6 @@ from .artist import ArtistProfile
 from .song import Song
 from .playlist import Playlist, playlist_songs
 from .token import PasswordResetToken, EmailConfirmationToken
+from .like import Like
+from .listen_history import ListenHistory
+from .playlist_save import PlaylistSave
