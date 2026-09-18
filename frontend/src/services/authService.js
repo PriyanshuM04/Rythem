@@ -30,4 +30,9 @@ export const authService = {
     });
     return response.data; // { message }
   },
+
+  confirmEmail: async (token) => {
+    const response = await api.post("/auth/confirm-email", { token });
+    return response.data; // { message }
+  },
 };
