@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { MailCheck } from "lucide-react";
 import AuthCard from "../../components/ui/AuthCard";
 import Input from "../../components/ui/Input";
 import PasswordInput from "../../components/ui/PasswordInput";
@@ -12,6 +13,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [registered, setRegistered] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ export default function Signup() {
     setLoading(true);
     try {
       await authService.register(identifier, password);
-      navigate("/login");
+      setRegistered(true);
     } catch (err) {
       const detail = err.response?.data?.detail;
       const message = Array.isArray(detail)
@@ -30,6 +32,27 @@ export default function Signup() {
       setLoading(false);
     }
   };
+
+  if (registered) {
+    return (
+      <AuthCard title="Check your email">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <MailCheck className="w-10 h-10 text-accent" />
+          <p className="text-gray-400">
+            We sent a confirmation link to{" "}
+            <span className="text-white font-medium">{identifier}</span>. Open it to
+            verify your account, then log in.
+          </p>
+          <p className="text-xs text-gray-500 font-sans">
+            Didn&apos;t get it? Check your spam or promotions folder.
+          </p>
+          <Button variant="primary" onClick={() => navigate("/login")}>
+            Go to Login
+          </Button>
+        </div>
+      </AuthCard>
+    );
+  }
 
   return (
     <AuthCard title="Sign up">
