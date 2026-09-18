@@ -5,6 +5,7 @@ import models, schemas
 from dependencies import get_db, get_current_user
 from models.listen_history import ListenHistory
 from models.like import Like
+from datetime import datetime
 
 router = APIRouter(prefix="/songs", tags=["Songs"])
 
@@ -44,9 +45,8 @@ def get_recent_songs(limit: int = 12, db: Session = Depends(get_db), current_use
     )
     results = []
     for song, played_at in rows:
-        item = schemas.SongWithLastPlayed.model_validate(song)
-        item.last_played_at = played_at
-        results.append(item)
+        base = schemas.SongResponse.model_validate(song).model_dump()
+        results.append(schemas.SongWithLastPlayed(**base, last_played_at=played_at))
     return results
 
 @router.get("/history", response_model=schemas.HistoryListResponse)
@@ -62,9 +62,8 @@ def get_song_history(offset: int = 0, limit: int = 20, db: Session = Depends(get
     rows = rows[:limit]
     songs = []
     for song, played_at in rows:
-        item = schemas.SongWithLastPlayed.model_validate(song)
-        item.last_played_at = played_at
-        songs.append(item)
+        base = schemas.SongResponse.model_validate(song).model_dump()
+        songs.append(schemas.SongWithLastPlayed(**base, last_played_at=played_at))
     return {"songs": songs, "has_more": has_more}
 
 @router.get("/liked", response_model=schemas.LikedSongsResponse)
@@ -78,6 +77,28 @@ def get_liked_songs(offset: int = 0, limit: int = 20, db: Session = Depends(get_
     )
     has_more = len(songs) > limit
     return {"songs": songs[:limit], "has_more": has_more}
+
+@router.post("/{song_id}/play", status_code=200)
+def log_play(song_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    existing = db.query(ListenHistory).filter(
+        ListenHistory.user_id == current_user.id,
+        ListenHistory.song_id == song_id,
+    ).first()
+
+    if existing:
+        # already played before — just bump the timestamp so it reorders to the top
+        existing.played_at = datetime.utcnow()
+    else:
+        # first time this user has played this song — counts once, ever
+        db.add(ListenHistory(user_id=current_user.id, song_id=song_id))
+        song.play_count += 1
+
+    db.commit()
+    return {"message": "Play logged"}
 
 @router.get("/{song_id}", response_model=schemas.SongResponse)
 def get_song(song_id: int, db: Session = Depends(get_db)):
