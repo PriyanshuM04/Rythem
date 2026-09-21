@@ -10,6 +10,7 @@ def create_artist_profile(artist: schemas.ArtistProfileCreate, db: Session = Dep
     existing = db.query(models.ArtistProfile).filter(models.ArtistProfile.user_id == current_user.id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Artist profile already exists")
+
     new_artist = models.ArtistProfile(
         artist_name=artist.artist_name,
         bio=artist.bio,
@@ -18,7 +19,24 @@ def create_artist_profile(artist: schemas.ArtistProfileCreate, db: Session = Dep
     db.add(new_artist)
     db.commit()
     db.refresh(new_artist)
+
+    # auto-create the system playlist that collects every song this artist is credited on
+    system_playlist = models.Playlist(
+        name=f"{new_artist.artist_name} — All Songs",
+        owner_id=current_user.id,
+        is_system=True,
+    )
+    db.add(system_playlist)
+    db.commit()
+
     return new_artist
+
+@router.get("/search", response_model=list[schemas.ArtistProfileResponse])
+def search_artists(q: str, db: Session = Depends(get_db)):
+    results = db.query(models.ArtistProfile).filter(models.ArtistProfile.artist_name.ilike(f"%{q}%")).all()
+    if not results:
+        raise HTTPException(status_code=404, detail="Artist does not exist")
+    return results
 
 @router.get("/{artist_id}", response_model=schemas.ArtistProfileResponse)
 def view_artist_profile(artist_id: int, db: Session = Depends(get_db)):

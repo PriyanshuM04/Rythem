@@ -38,3 +38,18 @@ class LikeResponse(BaseModel):
 class LikedSongsResponse(BaseModel):
     songs: list[SongResponse]
     has_more: bool
+
+class TagArtistsRequest(BaseModel):
+    artist_ids: list[int]
+
+class TagRespondRequest(BaseModel):
+    status: str  # "accepted" or "declined"
+
+class PendingTagResponse(BaseModel):
+    tag_id: int
+    song_id: int
+    song_title: str
+    uploader_name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

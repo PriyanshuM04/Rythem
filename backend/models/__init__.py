@@ -6,3 +6,4 @@ from .token import PasswordResetToken, EmailConfirmationToken
 from .like import Like
 from .listen_history import ListenHistory
 from .playlist_save import PlaylistSave
+from .song_artist_tag import SongArtistTag, TagStatus

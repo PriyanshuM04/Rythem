@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, Table, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -15,6 +15,7 @@ class Playlist(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_system = Column(Boolean, nullable=False, default=False)
 
     owner = relationship("User", back_populates="playlists")
     songs = relationship("Song", secondary=playlist_songs, back_populates="playlists")
