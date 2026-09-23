@@ -10,7 +10,7 @@ from .song import (
     TagArtistsRequest, TagRespondRequest, PendingTagResponse,
 )
 from .playlist import (
-    PlaylistCreate, PlaylistResponse, PlaylistSummary,
-    MyPlaylistsResponse, AddSongToPlaylistRequest,
-    PlaylistSaveResponse, SavedPlaylistsResponse,
+    PlaylistCreate, PlaylistUpdate, PlaylistOwner, PlaylistResponse,
+    PlaylistSummary, MyPlaylistsResponse, SavedPlaylistsResponse,
+    AddSongToPlaylistRequest, PlaylistSaveResponse,
 )
