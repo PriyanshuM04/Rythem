@@ -1,18 +1,41 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import models, schemas
-from dependencies import get_db, get_current_user
+from dependencies import get_db, get_current_user, get_current_user_optional
 from models.playlist_save import PlaylistSave
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
+def build_playlist_response(playlist: models.Playlist, db: Session, current_user) -> schemas.PlaylistResponse:
+    song_count = len(playlist.songs)
+    total_duration = sum(s.duration_seconds for s in playlist.songs)
+    saves_count = db.query(PlaylistSave).filter(PlaylistSave.playlist_id == playlist.id).count()
+    is_saved = False
+    if current_user:
+        is_saved = db.query(PlaylistSave).filter(
+            PlaylistSave.playlist_id == playlist.id, PlaylistSave.user_id == current_user.id
+        ).first() is not None
+
+    return schemas.PlaylistResponse(
+        id=playlist.id,
+        name=playlist.name,
+        owner=schemas.PlaylistOwner.model_validate(playlist.owner),
+        is_public=playlist.is_public,
+        cover_url=playlist.cover_url,
+        song_count=song_count,
+        total_duration_seconds=total_duration,
+        saves_count=saves_count,
+        is_saved=is_saved,
+        songs=[schemas.SongResponse.model_validate(s) for s in playlist.songs],
+    )
+
 @router.post("/", response_model=schemas.PlaylistResponse, status_code=201)
 def create_playlist(playlist: schemas.PlaylistCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    new_playlist = models.Playlist(name=playlist.name, owner_id=current_user.id)
+    new_playlist = models.Playlist(name=playlist.name, owner_id=current_user.id, is_public=playlist.is_public)
     db.add(new_playlist)
     db.commit()
     db.refresh(new_playlist)
-    return new_playlist
+    return build_playlist_response(new_playlist, db, current_user)
 
 @router.get("/mine", response_model=schemas.MyPlaylistsResponse)
 def get_my_playlists(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
@@ -30,11 +53,37 @@ def get_saved_playlists(db: Session = Depends(get_db), current_user = Depends(ge
     return {"playlists": playlists}
 
 @router.get("/{playlist_id}", response_model=schemas.PlaylistResponse)
-def get_playlist(playlist_id: int, db: Session = Depends(get_db)):
+def get_playlist(playlist_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user_optional)):
     playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
-    return playlist
+
+    is_owner = current_user is not None and playlist.owner_id == current_user.id
+    if not playlist.is_public and not is_owner:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    return build_playlist_response(playlist, db, current_user)
+
+@router.patch("/{playlist_id}", response_model=schemas.PlaylistResponse)
+def update_playlist(playlist_id: int, body: schemas.PlaylistUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    if playlist.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your playlist")
+    if playlist.is_system:
+        raise HTTPException(status_code=400, detail="System playlists cannot be edited")
+
+    if body.name is not None:
+        playlist.name = body.name
+    if body.cover_url is not None:
+        playlist.cover_url = body.cover_url
+    if body.is_public is not None:
+        playlist.is_public = body.is_public
+
+    db.commit()
+    db.refresh(playlist)
+    return build_playlist_response(playlist, db, current_user)
 
 @router.post("/{playlist_id}/songs", response_model=schemas.PlaylistResponse)
 def add_song_to_playlist(playlist_id: int, body: schemas.AddSongToPlaylistRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
@@ -51,17 +100,18 @@ def add_song_to_playlist(playlist_id: int, body: schemas.AddSongToPlaylistReques
     playlist.songs.append(song)
     db.commit()
     db.refresh(playlist)
-    return playlist
+    return build_playlist_response(playlist, db, current_user)
 
 @router.post("/{playlist_id}/save", response_model=schemas.PlaylistSaveResponse)
 def toggle_save_playlist(playlist_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+    if not playlist.is_public and playlist.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Playlist not found")
 
     existing = db.query(PlaylistSave).filter(
-        PlaylistSave.user_id == current_user.id,
-        PlaylistSave.playlist_id == playlist_id,
+        PlaylistSave.user_id == current_user.id, PlaylistSave.playlist_id == playlist_id
     ).first()
 
     if existing:
