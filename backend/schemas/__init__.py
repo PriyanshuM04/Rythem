@@ -3,7 +3,7 @@ from .user import (
     ForgotPasswordRequest, ResetPasswordRequest, ConfirmEmailRequest,
     MessageResponse, UserMeResponse,
 )
-from .artist import ArtistProfileCreate, ArtistProfileResponse
+from .artist import ArtistProfileCreate, ArtistProfileResponse, FollowResponse
 from .song import (
     SongCreate, SongResponse, SongWithLastPlayed,
     SongListResponse, HistoryListResponse, LikeResponse, LikedSongsResponse,
