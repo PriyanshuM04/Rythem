@@ -28,13 +28,13 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def verify_token(token: str):
+def verify_token(token: str) -> str:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username is None:
+        subject = payload.get("sub")
+        if subject is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return username
+        return subject
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 

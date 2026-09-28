@@ -15,14 +15,14 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 @router.post("/register", response_model=schemas.UserResponse, status_code=201)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(
-        (models.User.username == user.username) | (models.User.email == user.email)
+        (models.User.email == user.email) | (models.User.username == user.email)
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Username or email already registered")
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = auth.hash_password(user.password)
     new_user = models.User(
-        username=user.username,
+        username=user.email,  # placeholder until complete-profile; "@" is banned in chosen usernames
         email=user.email,
         hashed_password=hashed_password,
     )
@@ -40,7 +40,6 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
 
     send_confirmation_email(new_user.email, confirm_token, os.getenv("FRONTEND_URL"))
-    send_welcome_email(new_user.email, new_user.username)
 
     return new_user
 
@@ -53,7 +52,7 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not db_user.is_verified:
         raise HTTPException(status_code=403, detail="Please verify your email before logging in.")
-    access_token = auth.create_access_token(data={"sub": db_user.username})
+    access_token = auth.create_access_token(data={"sub": str(db_user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/forgot-password", response_model=schemas.MessageResponse)
