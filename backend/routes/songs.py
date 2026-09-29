@@ -21,6 +21,9 @@ def upload_song(song: schemas.SongCreate, db: Session = Depends(get_db), current
     new_song = models.Song(
         title=song.title,
         duration_seconds=song.duration_seconds,
+        genre=song.genre,
+        mood_tags=song.mood_tags,
+        bpm=song.bpm,
         uploader_id=artist_profile.id,
     )
     db.add(new_song)
