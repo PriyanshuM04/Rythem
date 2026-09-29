@@ -15,9 +15,16 @@ def get_db():
     finally:
         db.close()
 
+def _user_from_subject(subject: str, db: Session):
+    try:
+        user_id = int(subject)
+    except (TypeError, ValueError):
+        return None  # old tokens carrying a username land here and get rejected cleanly
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    username = auth.verify_token(token)
-    user = db.query(models.User).filter(models.User.username == username).first()
+    subject = auth.verify_token(token)
+    user = _user_from_subject(subject, db)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
@@ -26,8 +33,7 @@ def get_current_user_optional(token: str = Depends(oauth2_scheme_optional), db: 
     if not token:
         return None
     try:
-        username = auth.verify_token(token)
+        subject = auth.verify_token(token)
     except HTTPException:
         return None
-    user = db.query(models.User).filter(models.User.username == username).first()
-    return user
+    return _user_from_subject(subject, db)

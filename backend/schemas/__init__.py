@@ -2,6 +2,7 @@ from .user import (
     UserCreate, UserResponse, UserLogin, Token,
     ForgotPasswordRequest, ResetPasswordRequest, ConfirmEmailRequest,
     MessageResponse, UserMeResponse,
+    CompleteProfileRequest, UpdateProfileRequest, PublicUserResponse,
 )
 from .artist import ArtistProfileCreate, ArtistProfileResponse, FollowResponse
 from .song import (
