@@ -4,8 +4,6 @@ import models
 from routes import auth, artists, songs, playlists, users
 from fastapi.middleware.cors import CORSMiddleware
 
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Rythem API", version="1.0.0")
 
 app.add_middleware(
