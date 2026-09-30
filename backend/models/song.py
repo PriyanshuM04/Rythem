@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -15,16 +15,18 @@ class Song(Base):
     play_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, server_default=func.now())
 
+    genre = Column(String, nullable=True)
+    mood_tags = Column(ARRAY(String), nullable=True)
+    bpm = Column(Integer, nullable=True)
+
     uploader_id = Column(Integer, ForeignKey("artist_profiles.id"), nullable=False)
     uploader = relationship("ArtistProfile", foreign_keys=[uploader_id], back_populates="uploaded_songs")
 
     tags = relationship("SongArtistTag", back_populates="song", cascade="all, delete-orphan")
     playlists = relationship("Playlist", secondary="playlist_songs", back_populates="songs")
-
+    
     @property
     def artists(self) -> str:
-        # Only the uploader + artists who've actually accepted are shown as credited.
-        # Pending/declined tags never appear here.
         from models.song_artist_tag import TagStatus
         names = [self.uploader.artist_name] if self.uploader else []
         names += [

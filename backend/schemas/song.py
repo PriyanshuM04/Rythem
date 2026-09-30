@@ -4,6 +4,9 @@ from datetime import datetime
 class SongCreate(BaseModel):
     title: str
     duration_seconds: int
+    genre: str | None = None
+    mood_tags: list[str] | None = None
+    bpm: int | None = None
 
 class SongResponse(BaseModel):
     id: int
@@ -14,6 +17,9 @@ class SongResponse(BaseModel):
     thumbnail_url: str | None = None
     duration_seconds: int
     audio_url: str | None = None
+    genre: str | None = None
+    mood_tags: list[str] | None = None
+    bpm: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
