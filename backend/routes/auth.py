@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime
 import models, schemas, auth
@@ -8,6 +8,11 @@ from services.email_service import (
     send_password_reset_email,
     send_confirmation_email,
     send_welcome_email,
+)
+from services.rate_limiter import (
+    check_login_allowed,
+    record_failed_login,
+    reset_login_attempts,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -44,12 +49,24 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 @router.post("/login", response_model=schemas.Token)
-def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+def login(user: schemas.UserLogin, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+
+    retry_after = check_login_allowed(user.username, client_ip)
+    if retry_after:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed login attempts. Please try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     db_user = db.query(models.User).filter(
         (models.User.username == user.username) | (models.User.email == user.username)
     ).first()
     if not db_user or not auth.verify_password(user.password, db_user.hashed_password):
+        record_failed_login(user.username, client_ip)
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    reset_login_attempts(user.username)
     if not db_user.is_verified:
         raise HTTPException(status_code=403, detail="Please verify your email before logging in.")
     access_token = auth.create_access_token(data={"sub": str(db_user.id)})
