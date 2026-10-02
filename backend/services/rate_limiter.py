@@ -91,7 +91,7 @@ _store = _build_store()
 
 
 def _id_key(identifier: str) -> str:
-    return f"rl:login:id:{identifier.strip().lower()}"
+    return f"rl:login:id:{identifier}"
 
 
 def _ip_key(ip: str) -> str:
