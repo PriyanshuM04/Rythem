@@ -6,6 +6,8 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import ConfirmEmail from "./pages/auth/ConfirmEmail";
 import Home from "./pages/Home";
+import UserProfile from "./pages/UserProfile";
+import EditProfile from "./pages/EditProfile";
 import ArtistProfile from "./pages/ArtistProfile";
 import ArtistDashboard from "./pages/ArtistDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -24,6 +26,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/profile/edit" element={<EditProfile />} />
             <Route path="/artist/:id" element={<ArtistProfile />} />
             <Route path="/dashboard" element={<ArtistDashboard />} />
             <Route path="/player" element={<PlayerFull />} />

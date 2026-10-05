@@ -5,11 +5,15 @@ import Input from "../../components/ui/Input";
 import PasswordInput from "../../components/ui/PasswordInput";
 import Button from "../../components/ui/Button";
 import { authService } from "../../services/authService";
+import api from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
 
 export default function Login() {
   const navigate = useNavigate();
+
   const login = useAuthStore((s) => s.login);
+  const updateUser = useAuthStore((s) => s.updateUser);
+
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,19 +21,41 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
     setLoading(true);
+
     try {
+      // 1. Login
       const data = await authService.login(identifier, password);
-      // Backend only returns a token right now, no user object.
-      // Storing token; user details will need a separate /users/me call once that endpoint exists.
-      login({ username: identifier }, data.access_token);
-      navigate("/");
+
+      // 2. Store JWT
+      login(
+        {
+          username: identifier,
+        },
+        data.access_token
+      );
+
+      // 3. Fetch actual user
+      const { data: user } = await api.get("/users/me");
+
+      // 4. Store user in Zustand
+      updateUser(user);
+
+      // 5. Check profile completion
+      if (user.profile_completed) {
+        navigate("/", { replace: true });
+      } else {
+        navigate("/profile/edit", { replace: true });
+      }
     } catch (err) {
       const detail = err.response?.data?.detail;
+
       const message = Array.isArray(detail)
         ? detail.map((d) => d.msg).join(", ")
         : detail || "Login failed. Check your credentials.";
+
       setError(message);
     } finally {
       setLoading(false);
@@ -38,7 +64,10 @@ export default function Login() {
 
   return (
     <AuthCard title="Welcome back">
-      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full flex flex-col gap-4"
+      >
         <Input
           type="text"
           placeholder="Email"
@@ -46,27 +75,56 @@ export default function Login() {
           onChange={(e) => setIdentifier(e.target.value)}
           required
         />
+
         <PasswordInput
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
         <div className="flex justify-between font-sans text-xs text-gray-400 -mt-2">
-          <button type="button" onClick={() => navigate("/forgot-password")} className="hover:text-white">
+          <button
+            type="button"
+            onClick={() => navigate("/forgot-password")}
+            className="hover:text-white"
+          >
             Forgot Password?
           </button>
-          <button type="button" onClick={() => navigate("/signup")} className="hover:text-white">
+
+          <button
+            type="button"
+            onClick={() => navigate("/signup")}
+            className="hover:text-white"
+          >
             Sign Up
           </button>
         </div>
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+        {error && (
+          <p className="text-red-400 text-sm text-center">
+            {error}
+          </p>
+        )}
+
         <div className="flex flex-col items-center gap-2 w-full">
-          <Button type="submit" variant="primary" disabled={loading}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={loading}
+          >
             {loading ? "Please wait..." : "Continue"}
           </Button>
-          <span className="text-xs text-gray-500 font-sans">or</span>
-          <Button type="button" variant="google" className="max-w-55">
+
+          <span className="text-xs text-gray-500 font-sans">
+            or
+          </span>
+
+          <Button
+            type="button"
+            variant="google"
+            className="max-w-55"
+          >
             Continue with Google
           </Button>
         </div>
