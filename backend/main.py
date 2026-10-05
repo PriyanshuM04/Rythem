@@ -4,7 +4,10 @@ import models
 from routes import auth, artists, songs, playlists, users
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app = FastAPI(title="Rythem API", version="1.0.0")
+Base.metadata.create_all(bind=engine)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,11 +16,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.include_router(auth.router)
 app.include_router(artists.router)
 app.include_router(songs.router)
 app.include_router(playlists.router)
 app.include_router(users.router)
+
 
 @app.get("/")
 def root():
