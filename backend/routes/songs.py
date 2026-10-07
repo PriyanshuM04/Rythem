@@ -3,20 +3,34 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import models, schemas
-from dependencies import get_db, get_current_user
+from dependencies import get_db, get_current_user, get_current_user_optional
 from models.listen_history import ListenHistory
 from models.like import Like
 from models.song_artist_tag import SongArtistTag, TagStatus
+from services.storage import generate_upload_url, generate_download_url, object_exists, build_audio_key
 
 router = APIRouter(prefix="/songs", tags=["Songs"])
 
 MAX_TAGGED_ARTISTS = 5
 
+
+def build_song_response(song: models.Song, viewer=None) -> schemas.SongResponse:
+    data = schemas.SongResponse.model_validate(song).model_dump()
+    if song.audio_key and viewer is not None:
+        data["audio_url"] = generate_download_url(song.audio_key)
+    else:
+        data["audio_url"] = None
+    return schemas.SongResponse(**data)
+
+
 @router.post("/", response_model=schemas.SongResponse, status_code=201)
-def upload_song(song: schemas.SongCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def upload_song(song: schemas.SongCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     artist_profile = db.query(models.ArtistProfile).filter(models.ArtistProfile.user_id == current_user.id).first()
     if not artist_profile:
         raise HTTPException(status_code=403, detail="You need an artist profile to upload songs")
+
+    if not object_exists(song.audio_key):
+        raise HTTPException(status_code=400, detail="Audio file not found — upload may have failed or not completed yet")
 
     new_song = models.Song(
         title=song.title,
@@ -24,13 +38,13 @@ def upload_song(song: schemas.SongCreate, db: Session = Depends(get_db), current
         genre=song.genre,
         mood_tags=song.mood_tags,
         bpm=song.bpm,
+        audio_key=song.audio_key,
         uploader_id=artist_profile.id,
     )
     db.add(new_song)
     db.commit()
     db.refresh(new_song)
 
-    # uploader is auto-tagged and auto-accepted
     uploader_tag = SongArtistTag(
         song_id=new_song.id,
         artist_id=artist_profile.id,
@@ -39,7 +53,6 @@ def upload_song(song: schemas.SongCreate, db: Session = Depends(get_db), current
     )
     db.add(uploader_tag)
 
-    # add to uploader's system playlist immediately
     system_playlist = db.query(models.Playlist).filter(
         models.Playlist.owner_id == current_user.id, models.Playlist.is_system == True
     ).first()
@@ -48,20 +61,22 @@ def upload_song(song: schemas.SongCreate, db: Session = Depends(get_db), current
 
     db.commit()
     db.refresh(new_song)
-    return new_song
+    return build_song_response(new_song, viewer=current_user)
+
 
 @router.get("/trending", response_model=schemas.SongListResponse)
-def get_trending_songs(offset: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def get_trending_songs(offset: int = 0, limit: int = 10, db: Session = Depends(get_db), viewer=Depends(get_current_user_optional)):
     songs = (
         db.query(models.Song)
         .order_by(desc(models.Song.play_count))
         .offset(offset).limit(limit + 1).all()
     )
     has_more = len(songs) > limit
-    return {"songs": songs[:limit], "has_more": has_more}
+    return {"songs": [build_song_response(s, viewer) for s in songs[:limit]], "has_more": has_more}
+
 
 @router.get("/recent", response_model=list[schemas.SongWithLastPlayed])
-def get_recent_songs(limit: int = 12, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def get_recent_songs(limit: int = 12, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     rows = (
         db.query(models.Song, ListenHistory.played_at)
         .join(ListenHistory, ListenHistory.song_id == models.Song.id)
@@ -71,12 +86,13 @@ def get_recent_songs(limit: int = 12, db: Session = Depends(get_db), current_use
     )
     results = []
     for song, played_at in rows:
-        base = schemas.SongResponse.model_validate(song).model_dump()
+        base = build_song_response(song, viewer=current_user).model_dump()
         results.append(schemas.SongWithLastPlayed(**base, last_played_at=played_at))
     return results
 
+
 @router.get("/history", response_model=schemas.HistoryListResponse)
-def get_song_history(offset: int = 0, limit: int = 20, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def get_song_history(offset: int = 0, limit: int = 20, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     rows = (
         db.query(models.Song, ListenHistory.played_at)
         .join(ListenHistory, ListenHistory.song_id == models.Song.id)
@@ -88,12 +104,13 @@ def get_song_history(offset: int = 0, limit: int = 20, db: Session = Depends(get
     rows = rows[:limit]
     songs = []
     for song, played_at in rows:
-        base = schemas.SongResponse.model_validate(song).model_dump()
+        base = build_song_response(song, viewer=current_user).model_dump()
         songs.append(schemas.SongWithLastPlayed(**base, last_played_at=played_at))
     return {"songs": songs, "has_more": has_more}
 
+
 @router.get("/liked", response_model=schemas.LikedSongsResponse)
-def get_liked_songs(offset: int = 0, limit: int = 20, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def get_liked_songs(offset: int = 0, limit: int = 20, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     songs = (
         db.query(models.Song)
         .join(Like, Like.song_id == models.Song.id)
@@ -102,10 +119,11 @@ def get_liked_songs(offset: int = 0, limit: int = 20, db: Session = Depends(get_
         .offset(offset).limit(limit + 1).all()
     )
     has_more = len(songs) > limit
-    return {"songs": songs[:limit], "has_more": has_more}
+    return {"songs": [build_song_response(s, current_user) for s in songs[:limit]], "has_more": has_more}
+
 
 @router.get("/tags/pending", response_model=list[schemas.PendingTagResponse])
-def get_pending_tags(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def get_pending_tags(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     artist_profile = db.query(models.ArtistProfile).filter(models.ArtistProfile.user_id == current_user.id).first()
     if not artist_profile:
         return []
@@ -122,8 +140,9 @@ def get_pending_tags(db: Session = Depends(get_db), current_user = Depends(get_c
         for t in pending
     ]
 
+
 @router.patch("/tags/{tag_id}/respond")
-def respond_to_tag(tag_id: int, body: schemas.TagRespondRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def respond_to_tag(tag_id: int, body: schemas.TagRespondRequest, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     if body.status not in ("accepted", "declined"):
         raise HTTPException(status_code=400, detail="status must be 'accepted' or 'declined'")
 
@@ -152,8 +171,9 @@ def respond_to_tag(tag_id: int, body: schemas.TagRespondRequest, db: Session = D
     db.commit()
     return {"message": f"Tag {tag.status.value}"}
 
+
 @router.post("/{song_id}/play", status_code=200)
-def log_play(song_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def log_play(song_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
@@ -172,15 +192,32 @@ def log_play(song_id: int, db: Session = Depends(get_db), current_user = Depends
     db.commit()
     return {"message": "Play logged"}
 
+
+@router.post("/upload-url", response_model=schemas.AudioUploadUrlResponse)
+def get_audio_upload_url(body: schemas.AudioUploadUrlRequest, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    artist_profile = db.query(models.ArtistProfile).filter(models.ArtistProfile.user_id == current_user.id).first()
+    if not artist_profile:
+        raise HTTPException(status_code=403, detail="You need an artist profile to upload songs")
+
+    try:
+        key = build_audio_key(artist_profile.id, body.file_extension)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    url = generate_upload_url(key)
+    return {"upload_url": url, "key": key, "expires_in": 900}
+
+
 @router.get("/{song_id}", response_model=schemas.SongResponse)
-def get_song(song_id: int, db: Session = Depends(get_db)):
+def get_song(song_id: int, db: Session = Depends(get_db), viewer=Depends(get_current_user_optional)):
     song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
-    return song
+    return build_song_response(song, viewer)
+
 
 @router.post("/{song_id}/like", response_model=schemas.LikeResponse)
-def toggle_like(song_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def toggle_like(song_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
@@ -193,8 +230,9 @@ def toggle_like(song_id: int, db: Session = Depends(get_db), current_user = Depe
     db.commit()
     return {"liked": True}
 
+
 @router.post("/{song_id}/artists")
-def tag_artists(song_id: int, body: schemas.TagArtistsRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def tag_artists(song_id: int, body: schemas.TagArtistsRequest, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")

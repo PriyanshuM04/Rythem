@@ -11,7 +11,7 @@ class Song(Base):
     album = Column(String, nullable=True)
     duration_seconds = Column(Integer, nullable=False)
     thumbnail_url = Column(String, nullable=True)
-    audio_url = Column(String, nullable=True)
+    audio_key = Column(String, nullable=True)
     play_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, server_default=func.now())
 
