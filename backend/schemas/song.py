@@ -7,6 +7,15 @@ class SongCreate(BaseModel):
     genre: str | None = None
     mood_tags: list[str] | None = None
     bpm: int | None = None
+    audio_key: str
+
+class AudioUploadUrlRequest(BaseModel):
+    file_extension: str
+
+class AudioUploadUrlResponse(BaseModel):
+    upload_url: str
+    key: str
+    expires_in: int
 
 class SongResponse(BaseModel):
     id: int

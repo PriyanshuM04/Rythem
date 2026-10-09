@@ -9,6 +9,7 @@ from .song import (
     SongCreate, SongResponse, SongWithLastPlayed,
     SongListResponse, HistoryListResponse, LikeResponse, LikedSongsResponse,
     TagArtistsRequest, TagRespondRequest, PendingTagResponse,
+    AudioUploadUrlRequest, AudioUploadUrlResponse,
 )
 from .playlist import (
     PlaylistCreate, PlaylistUpdate, PlaylistOwner, PlaylistResponse,
