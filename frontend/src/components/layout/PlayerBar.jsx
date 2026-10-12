@@ -9,7 +9,6 @@ import {
   Repeat,
   Repeat1,
   Heart,
-  Plus,
   MoreHorizontal,
   Volume2,
   VolumeX,
@@ -17,18 +16,7 @@ import {
 } from "lucide-react";
 import { usePlayerStore } from "../../store/playerStore";
 import PlayableThumbnail from "../ui/PlayableThumbnail";
-
-// Placeholder — real playlists come from backend later
-const mockPlaylists = [
-  { id: 1, name: "My Playlist 1" },
-  { id: 2, name: "My Playlist 2" },
-  { id: 3, name: "My Playlist 3" },
-  { id: 4, name: "My Playlist 4" },
-  { id: 5, name: "My Playlist 5" },
-  { id: 6, name: "My Playlist 6" },
-  { id: 7, name: "My Playlist 7" },
-  { id: 8, name: "My Playlist 8" },
-];
+import AddToPlaylistMenu from "../playlist/AddToPlaylistMenu";
 
 // Placeholder — real menu items/routes decided later
 const optionsMenuItems = [{ label: "Option 1", path: "/option-1" }];
@@ -60,14 +48,11 @@ export default function PlayerBar() {
     cycleRepeat,
   } = usePlayerStore();
 
-  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  const playlistRef = useRef(null);
   const optionsRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (playlistRef.current && !playlistRef.current.contains(e.target)) setShowPlaylistMenu(false);
       if (optionsRef.current && !optionsRef.current.contains(e.target)) setShowOptionsMenu(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -179,34 +164,7 @@ export default function PlayerBar() {
         </div>
 
         {/* Add to playlist */}
-        <div className="relative" ref={playlistRef}>
-          <button
-            onClick={() => setShowPlaylistMenu((o) => !o)}
-            className="text-gray-300 hover:text-white transition"
-            title="Add to playlist"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          {showPlaylistMenu && (
-            <div className="absolute bottom-10 right-0 w-48 bg-surface-raised border border-border rounded-md shadow-lg z-20">
-              <p className="text-xs text-gray-400 px-3 pt-2 pb-1">Add to playlist</p>
-              <div className="max-h-42 overflow-y-auto custom-scrollbar">
-                {mockPlaylists.map((pl) => (
-                  <button
-                    key={pl.id}
-                    onClick={() => {
-                      // TODO: wire to real "add song to playlist" backend call
-                      setShowPlaylistMenu(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 transition truncate"
-                  >
-                    {pl.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <AddToPlaylistMenu song={currentSong} />
 
         {/* Options menu */}
         <div className="relative" ref={optionsRef}>
