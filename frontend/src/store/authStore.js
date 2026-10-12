@@ -8,15 +8,31 @@ export const useAuthStore = create(
       token: null,
       isAuthenticated: false,
 
-      login: (user, token) =>
-        set({ user, token, isAuthenticated: true }),
+      login: (user, token) => {
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+        });
+      },
 
-      logout: () =>
-        set({ user: null, token: null, isAuthenticated: false }),
+      logout: () => {
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+        });
+      },
 
       updateUser: (partial) =>
-        set((state) => ({ user: { ...state.user, ...partial } })),
+        set((state) => ({
+          user: state.user
+            ? { ...state.user, ...partial }
+            : null,
+        })),
     }),
-    { name: "rythem-auth" }
+    {
+      name: "rythem-auth",
+    }
   )
 );
