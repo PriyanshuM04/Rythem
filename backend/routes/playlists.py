@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 import models, schemas
 from dependencies import get_db, get_current_user, get_current_user_optional
 from models.playlist_save import PlaylistSave
+from services.image_storage import build_image_path, upload_image, delete_image
+from routes.songs import build_song_response
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
@@ -26,7 +28,7 @@ def build_playlist_response(playlist: models.Playlist, db: Session, current_user
         total_duration_seconds=total_duration,
         saves_count=saves_count,
         is_saved=is_saved,
-        songs=[schemas.SongResponse.model_validate(s) for s in playlist.songs],
+        songs=[build_song_response(s, current_user) for s in playlist.songs],
     )
 
 @router.post("/", response_model=schemas.PlaylistResponse, status_code=201)
@@ -76,13 +78,48 @@ def update_playlist(playlist_id: int, body: schemas.PlaylistUpdate, db: Session 
 
     if body.name is not None:
         playlist.name = body.name
-    if body.cover_url is not None:
-        playlist.cover_url = body.cover_url
     if body.is_public is not None:
         playlist.is_public = body.is_public
 
     db.commit()
     db.refresh(playlist)
+    return build_playlist_response(playlist, db, current_user)
+
+def get_editable_playlist(playlist_id: int, db: Session, current_user) -> models.Playlist:
+    playlist = db.query(models.Playlist).filter(models.Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    if playlist.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your playlist")
+    if playlist.is_system:
+        raise HTTPException(status_code=400, detail="System playlists cannot be edited")
+    return playlist
+
+@router.put("/{playlist_id}/cover", response_model=schemas.PlaylistResponse)
+def upload_playlist_cover(playlist_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    playlist = get_editable_playlist(playlist_id, db, current_user)
+
+    path = build_image_path("playlist-covers", playlist.id, file)
+    upload_image(file, path)
+
+    old_path = playlist.cover_path
+    playlist.cover_path = path
+    db.commit()
+    db.refresh(playlist)
+
+    delete_image(old_path)
+    return build_playlist_response(playlist, db, current_user)
+
+@router.delete("/{playlist_id}/cover", response_model=schemas.PlaylistResponse)
+def remove_playlist_cover(playlist_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    playlist = get_editable_playlist(playlist_id, db, current_user)
+
+    old_path = playlist.cover_path
+    playlist.cover_path = None
+    db.commit()
+    db.refresh(playlist)
+
+    delete_image(old_path)
     return build_playlist_response(playlist, db, current_user)
 
 @router.post("/{playlist_id}/songs", response_model=schemas.PlaylistResponse)

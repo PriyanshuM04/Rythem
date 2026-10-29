@@ -1,11 +1,11 @@
 import re
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 import models, schemas
 from dependencies import get_db, get_current_user, get_current_user_optional
 from services.email_service import send_welcome_email
+from services.image_storage import build_image_path, upload_image, delete_image
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -95,11 +95,31 @@ def update_me(body: schemas.UpdateProfileRequest, db: Session = Depends(get_db),
         if data.get(field) is not None:
             setattr(current_user, field, data[field])
 
-    if "avatar_url" in data:  # explicit null clears the avatar
-        current_user.avatar_url = data["avatar_url"]
-
     db.commit()
     db.refresh(current_user)
+    return build_me_response(current_user, db)
+
+@router.put("/me/avatar", response_model=schemas.UserMeResponse)
+def upload_avatar(file: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    path = build_image_path("avatars", current_user.id, file)
+    upload_image(file, path)
+
+    old_path = current_user.avatar_path
+    current_user.avatar_path = path
+    db.commit()
+    db.refresh(current_user)
+
+    delete_image(old_path)
+    return build_me_response(current_user, db)
+
+@router.delete("/me/avatar", response_model=schemas.UserMeResponse)
+def remove_avatar(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    old_path = current_user.avatar_path
+    current_user.avatar_path = None
+    db.commit()
+    db.refresh(current_user)
+
+    delete_image(old_path)
     return build_me_response(current_user, db)
 
 # must stay BELOW the /me routes, otherwise "me" gets parsed as a user_id

@@ -7,7 +7,6 @@ class PlaylistCreate(BaseModel):
 
 class PlaylistUpdate(BaseModel):
     name: str | None = None
-    cover_url: str | None = None
     is_public: bool | None = None
 
 class PlaylistOwner(BaseModel):

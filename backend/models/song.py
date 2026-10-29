@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
+from services.image_storage import public_image_url
 
 class Song(Base):
     __tablename__ = "songs"
@@ -10,7 +11,7 @@ class Song(Base):
     title = Column(String, nullable=False)
     album = Column(String, nullable=True)
     duration_seconds = Column(Integer, nullable=False)
-    thumbnail_url = Column(String, nullable=True)
+    thumbnail_path = Column(String, nullable=True)
     audio_key = Column(String, nullable=True)
     play_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, server_default=func.now())
@@ -34,3 +35,6 @@ class Song(Base):
             if t.status == TagStatus.accepted and t.artist_id != self.uploader_id
         ]
         return ", ".join(names)
+    @property
+    def thumbnail_url(self) -> str | None:
+        return public_image_url(self.thumbnail_path)

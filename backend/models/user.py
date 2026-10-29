@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+from services.image_storage import public_image_url
 
 class User(Base):
     __tablename__ = "users"
@@ -11,7 +12,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     # profile (filled in on the first-login "complete profile" page)
-    avatar_url = Column(String, nullable=True)
+    avatar_path = Column(String, nullable=True)  # object path in Supabase Storage, not a URL
     gender = Column(String, nullable=True)
     country = Column(String, nullable=True)
     date_of_birth = Column(Date, nullable=True)
@@ -22,3 +23,7 @@ class User(Base):
 
     playlists = relationship("Playlist", back_populates="owner")
     artist_profile = relationship("ArtistProfile", back_populates="user", uselist=False)
+
+    @property
+    def avatar_url(self) -> str | None:
+        return public_image_url(self.avatar_path)

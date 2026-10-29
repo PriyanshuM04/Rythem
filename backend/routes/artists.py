@@ -5,6 +5,7 @@ import models, schemas
 from dependencies import get_db, get_current_user, get_current_user_optional
 from models.follow import Follow
 from models.song_artist_tag import SongArtistTag, TagStatus
+from routes.songs import build_song_response
 
 router = APIRouter(prefix="/artists", tags=["Artists"])
 
@@ -104,6 +105,6 @@ def build_artist_response(artist: models.ArtistProfile, db: Session, current_use
         bio=artist.bio,
         follower_count=follower_count,
         is_following=is_following,
-        top_songs=[schemas.SongResponse.model_validate(s) for s in top_songs],
+        top_songs=[build_song_response(s, current_user) for s in top_songs],
         all_songs_playlist_id=system_playlist.id if system_playlist else None,
     )

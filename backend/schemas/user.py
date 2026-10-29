@@ -83,7 +83,6 @@ class UpdateProfileRequest(BaseModel):
     country: str | None = Field(default=None, min_length=2, max_length=64)
     date_of_birth: date | None = None
     account_type: AccountType | None = None
-    avatar_url: str | None = None
 
     @field_validator("username")
     @classmethod

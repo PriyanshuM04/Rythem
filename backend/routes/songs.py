@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import models, schemas
@@ -8,6 +8,7 @@ from models.listen_history import ListenHistory
 from models.like import Like
 from models.song_artist_tag import SongArtistTag, TagStatus
 from services.storage import generate_upload_url, generate_download_url, object_exists, build_audio_key
+from services.image_storage import build_image_path, upload_image, delete_image
 
 router = APIRouter(prefix="/songs", tags=["Songs"])
 
@@ -215,6 +216,26 @@ def get_song(song_id: int, db: Session = Depends(get_db), viewer=Depends(get_cur
         raise HTTPException(status_code=404, detail="Song not found")
     return build_song_response(song, viewer)
 
+@router.put("/{song_id}/cover", response_model=schemas.SongResponse)
+def upload_song_cover(song_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    uploader_profile = db.query(models.ArtistProfile).filter(models.ArtistProfile.user_id == current_user.id).first()
+    if not uploader_profile or song.uploader_id != uploader_profile.id:
+        raise HTTPException(status_code=403, detail="Only the uploader can change this song's cover")
+
+    path = build_image_path("song-covers", song.id, file)
+    upload_image(file, path)
+
+    old_path = song.thumbnail_path
+    song.thumbnail_path = path
+    db.commit()
+    db.refresh(song)
+
+    delete_image(old_path)
+    return build_song_response(song, viewer=current_user)
 
 @router.post("/{song_id}/like", response_model=schemas.LikeResponse)
 def toggle_like(song_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
